@@ -6,13 +6,15 @@ bip = "3.0+"
 
 [build.c]
 std = "c11"
+include = [ "include" ]
 hide-symbols = true
 
 [build.cpp]
 std = "c++23"
+include = [ "include" ]
 hide-symbols = true
 
-[game]
-exe = "game"
+[driver]
+exe = "vm-prototype"
 lang = "cpp"
 libs = [ "nwge", "SDL2" ]
