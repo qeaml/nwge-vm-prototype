@@ -1,4 +1,5 @@
 #include "script/VM.hpp"
+#include <utility>
 
 namespace nwge::proto::script {
 
@@ -7,6 +8,12 @@ VM::VM() {
 }
 
 VM::~VM() = default;
+
+Value &VM::bind(Slot slot, SlotCallback callback) {
+  auto &slotData = mSlots[slot];
+  slotData.callback = std::move(callback);
+  return slotData.value;
+}
 
 Error VM::runAll() {
   Error err;
@@ -71,9 +78,8 @@ Error VM::runInstr(InstrS instr) {
   }
 
   case Opcode::Bool: {
-    auto slot = Slot(instr.arg);
-    auto val = mSlots[slot];
-    mConditionResult = val != 0;
+    const auto &slot = mSlots[instr.arg];
+    mConditionResult = slot.value != 0;
     break;
   }
 
@@ -201,30 +207,27 @@ Error VM::runInstr(InstrS instr) {
 Error VM::runInstrEx(InstrExS instr) {
   switch(Opcode(instr.op)) {
   case Opcode::MvS2R: {
-    auto slot = Slot(instr.arg);
-    auto reg = Register(instr.reg);
-    mRegisters[reg] = mSlots[slot];
+    mRegisters[instr.reg] = mSlots[instr.arg].value;
     break;
   }
 
   case Opcode::MvR2S: {
-    auto slot = Slot(instr.arg);
-    auto reg = Register(instr.reg);
-    mSlots[slot] = mRegisters[reg];
+    auto &slot = mSlots[instr.arg];
+    auto value = mRegisters[instr.reg];
+    slot.value = value;
+    if(slot.callback != nullptr) {
+      slot.callback(slot.value);
+    }
     break;
   }
 
   case Opcode::LdI: {
-    auto reg = Register(instr.reg);
-    auto val = instr.arg;
-    mRegisters[reg] = val;
+    mRegisters[instr.reg] = instr.arg;
     break;
   }
 
   case Opcode::LdC: {
-    auto reg = Register(instr.reg);
-    auto idx = instr.arg;
-    mRegisters[reg] = mScript.constTable[idx];
+    mRegisters[instr.reg] = mScript.constTable[instr.arg];
     break;
   }
 

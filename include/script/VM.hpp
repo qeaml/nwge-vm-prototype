@@ -8,6 +8,7 @@ Defines the VM class, containing the state of the script VM.
 
 #include "Script.hpp"
 #include <array>
+#include <functional>
 #include <nwge/common/array.hpp>
 
 namespace nwge::proto::script {
@@ -35,6 +36,10 @@ public:
   Error runNext();
   Error runAll();
 
+  using SlotCallback = std::function<void(Value&)>;
+
+  Value &bind(Slot slot, SlotCallback callback = nullptr);
+
 private:
   /* constants, loaded from script */
 
@@ -47,8 +52,13 @@ private:
   InstrPtr mInstrPtr = 0;
   u8 mCallStackPtr = 0;
   std::array<Value, cRegisterCount> mRegisters{};
-  std::array<Value, cSlotCount> mSlots{};
   std::array<InstrPtr, cCallStackSize> mCallStack{};
+
+  struct SlotData {
+    Value value = 0;
+    SlotCallback callback = nullptr;
+  };
+  std::array<SlotData, cSlotCount> mSlots{};
 
   /* helpers */
 
