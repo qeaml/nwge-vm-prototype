@@ -23,7 +23,10 @@ enum class ErrorCode: u8 {
   IllegalXCall,   // call to unknown external function
   MissingSymbol,  // a function in the symbol table was not found
   Unimplemented,  // not yet implemented
+  Max,
 };
+
+const StringView &errMsg(ErrorCode code);
 
 struct Error {
   ErrorCode code = ErrorCode::OK;

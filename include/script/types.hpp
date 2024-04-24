@@ -36,11 +36,21 @@ static constexpr usize
 [[maybe_unused]]
 static constexpr usize cCallStackSize = 16;
 
+#define SCRIPT_INSTR(op, arg) (u16)( \
+    ((u16)((u16)(op) & 0xFF) << 8) | \
+    ((u16)((arg) & 0xFF))            \
+  )
 #define SCRIPT_INSTR_OPCODE(instr) (u8)(((instr) >> 8) & 0xFF)
 #define SCRIPT_INSTR_ARG(instr) (u8)((instr) & 0xFF)
 
+#define SCRIPT_INSTR_EX(op, reg, arg) (u16)( \
+    ((u16)((u16)(op) & 0xF) << 12) |         \
+    ((u16)((reg) & 0xF) << 8) |              \
+    ((u16)((arg) & 0xFF) |                   \
+    0x8000)                                  \
+  )
 #define SCRIPT_INSTR_IS_EX(instr) (((instr) & 0x8000) == 0x8000)
-#define SCRIPT_INSTR_EX_OPCODE(instr) (u8)(((instr) >> 12) & 0xF)
+#define SCRIPT_INSTR_EX_OPCODE(instr) (u8)(((instr) >> 12) & 0x7)
 #define SCRIPT_INSTR_EX_REG(instr) (u8)(((instr) >> 8) & 0xF)
 #define SCRIPT_INSTR_EX_ARG(instr) (u8)((instr) & 0xFF)
 
@@ -86,7 +96,7 @@ enum class Opcode: u8 {
   Ret,
 
   /// Move from a slot to a register
-  MvS2R = 1 << 7, // <-- highest bit set = extended argument encoding
+  MvS2R = 0,
   /// Move from a register to a slot
   MvR2S,
   /// Load an 8-bit value into a slot

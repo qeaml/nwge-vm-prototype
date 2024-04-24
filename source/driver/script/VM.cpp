@@ -50,10 +50,11 @@ bool VM::resolveSymbols() {
     for(auto &funcDef : mFuncDefs) {
       if(funcDef.name == name) {
         mFuncTable[i] = &funcDef.callback;
-        break;
+        goto next;
       }
     }
     return false;
+    next:;
   }
   return true;
 }
@@ -290,6 +291,21 @@ Error VM::runInstrEx(InstrExS instr) {
   }
 
   return {};
+}
+
+static constexpr std::array<const StringView, usize(ErrorCode::Max)>
+  cErrMsgs{
+    "OK",
+    "the script ended execution",
+    "an illegal or unknown instruction was encountered",
+    "call stack underflow",
+    "call to unknown external function",
+    "a function in the symbol table was not found",
+    "not yet implemented",
+  };
+
+const StringView &errMsg(ErrorCode code) {
+  return cErrMsgs[usize(code)];
 }
 
 } // namespace nwge::proto::script
