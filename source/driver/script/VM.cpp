@@ -3,9 +3,7 @@
 
 namespace nwge::proto::script {
 
-VM::VM() {
-  mCallStack.fill(cInvalidInstrPtr);
-}
+VM::VM() = default;
 
 VM::~VM() = default;
 
@@ -13,6 +11,51 @@ Value &VM::bind(Slot slot, SlotCallback callback) {
   auto &slotData = mSlots[slot];
   slotData.callback = std::move(callback);
   return slotData.value;
+}
+
+void VM::registerFunc(const StringView &name, FuncCallback callback) {
+  mFuncDefs.push({name, std::move(callback)});
+}
+
+ErrorCode VM::load(const Script &script) {
+  mScript = script;
+  return loadScript();
+}
+
+ErrorCode VM::load(Script &&script) {
+  mScript = std::move(script);
+  return loadScript();
+}
+
+ErrorCode VM::loadScript() {
+  mInstrPtr = 0;
+  mCallStack.fill(cInvalidInstrPtr);
+  mCallStackPtr = 0;
+  mComparisonResult = ComparisonResult::Unknown;
+  mConditionResult = false;
+  mRegisters.fill(0);
+  mSlots.fill({});
+
+  if(!resolveSymbols()) {
+    return ErrorCode::MissingSymbol;
+  }
+
+  return ErrorCode::OK;
+}
+
+bool VM::resolveSymbols() {
+  mFuncTable.fill(nullptr);
+  for(usize i = 0; i < mScript.symbolTable.size(); ++i) {
+    auto name = mScript.symbolTable[i].view();
+    for(auto &funcDef : mFuncDefs) {
+      if(funcDef.name == name) {
+        mFuncTable[i] = &funcDef.callback;
+        break;
+      }
+    }
+    return false;
+  }
+  return true;
 }
 
 Error VM::runAll() {
@@ -232,10 +275,13 @@ Error VM::runInstrEx(InstrExS instr) {
   }
 
   case Opcode::XCall: {
-    // auto retReg = Register(instr.reg);
-    // auto idx = instr.arg;
-    // TODO: call external function idx and store return value in retReg
-    return {ErrorCode::Unimplemented, mInstrPtr};
+    auto *callback = mFuncTable[instr.arg];
+    if(callback == nullptr) {
+      return {ErrorCode::IllegalXCall, mInstrPtr};
+    }
+    ArrayView<Value> args{mRegisters.data(), cRegisterCount};
+    mRegisters[0] = (*callback)(args.sub(instr.reg));
+    return {};
   }
 
   default:

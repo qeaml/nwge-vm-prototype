@@ -27,6 +27,11 @@ using Instr = u16;
 using InstrPtr = u16;
 [[maybe_unused]]
 static constexpr InstrPtr cInvalidInstrPtr = 0xFFFF;
+using FuncIdx = u8;
+[[maybe_unused]]
+static constexpr usize
+  cDefaultFuncDefCount = 8,
+  cFuncTableSize = 256;
 
 [[maybe_unused]]
 static constexpr usize cCallStackSize = 16;

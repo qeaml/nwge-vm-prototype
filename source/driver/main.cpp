@@ -6,12 +6,18 @@ using namespace nwge;
 class Test: public nwge::State {
 public:
   bool init() override {
-    console::print("The script must be now loaded... TODO!");
-
     mVM.bind(10, [](auto &value){
       infoBox("Hello from slot 10!",
         "Slot 10 is now {}", value);
     });
+
+    mVM.registerFunc("Hello",
+      []([[maybe_unused]] const auto &args){
+        infoBox("Hello",
+          "Hello from external function");
+        return 0;
+      });
+
     return true;
   }
 

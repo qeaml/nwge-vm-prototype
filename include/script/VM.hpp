@@ -10,15 +10,19 @@ Defines the VM class, containing the state of the script VM.
 #include <array>
 #include <functional>
 #include <nwge/common/array.hpp>
+#include <nwge/common/slice.hpp>
+#include <nwge/common/string.hpp>
 
 namespace nwge::proto::script {
 
 enum class ErrorCode: u8 {
   OK,
   EndOfExecution, // the script ended execution
-  IllegalInstr, // an illegal or unknown instruction was encountered
-  InvalidReturn, // call stack underflow
-  Unimplemented, // not yet implemented
+  IllegalInstr,   // an illegal or unknown instruction was encountered
+  InvalidReturn,  // call stack underflow
+  IllegalXCall,   // call to unknown external function
+  MissingSymbol,  // a function in the symbol table was not found
+  Unimplemented,  // not yet implemented
 };
 
 struct Error {
@@ -31,8 +35,8 @@ public:
   VM();
   ~VM();
 
-  void load(const Script &script);
-  void load(Script &&script);
+  ErrorCode load(const Script &script);
+  ErrorCode load(Script &&script);
   Error runNext();
   Error runAll();
 
@@ -40,10 +44,25 @@ public:
 
   Value &bind(Slot slot, SlotCallback callback = nullptr);
 
+  using FuncCallback = std::function<Value(const ArrayView<Value>&)>;
+
+  void registerFunc(const StringView &name, FuncCallback callback);
+
 private:
   /* constants, loaded from script */
 
   Script mScript{};
+  ErrorCode loadScript();
+
+  struct FuncDef {
+    String<> name;
+    FuncCallback callback;
+  };
+  /// the function definitions specified by host app
+  Slice<FuncDef> mFuncDefs{cDefaultFuncDefCount};
+  /// function table used during runtime
+  std::array<FuncCallback*, cFuncTableSize> mFuncTable{};
+  bool resolveSymbols();
 
   /* runtime state */
 
